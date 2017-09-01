@@ -44,9 +44,25 @@
 
 # Kernel Module Compile Results
 *.mod*
-*.cmd
 .tmp_versions/
 modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+**\Debug
+**\Release 
+.xdchelp
+\.config
+\.launches
+/christmas-tree/targetConfigs/Tiva TM4C123GE6PM.ccxml
+/christmas-tree/targetConfigs/readme.txt
+/christmas-tree/Debug/makefile
+/christmas-tree/Debug/objects.mk
+/christmas-tree/Debug/sources.mk
+/christmas-tree/Debug/subdir_rules.mk
+/christmas-tree/Debug/subdir_vars.mk
+/christmas-tree/Debug/ccsObjs.opt
+/christmas-tree/Debug/christmas-tree_linkInfo.xml
+**/targetConfigs/
+Debug
