@@ -1,9 +1,9 @@
 /*
- * \file
- * led_driver_tlc5955.h
+ * \file led_driver_tlc5955.h
  *
- *  Created on: Sep 14, 2017
- *      Author: Levi
+ * \version 0.1
+ * \date Sep 14, 2017
+ * \author  Levi
  */
 #include <stdint.h>
 
@@ -22,26 +22,25 @@ extern "C"
 #endif
 
 /*
- * \param LED_WHITE
+ * \def LED_WHITE
  *
- * \param LED_OFF
+ * \def LED_OFF
  *
  *
  */
 //                                 | RED  |          | GREEN|          | BLUE |
-#define COLOR_WHITE     ((uint16_t) 0xFFFF,(uint16_t) 0xFFFF,(uint16_t) OxFFFF)
-#define COLOR_RED       ((uint16_t) 0xFFFF,(uint16_t) 0x0000,(uint16_t) Ox0000)
-#define COLOR_ORANGE    ((uint16_t) 0xFFFF,(uint16_t) 0x7FFF,(uint16_t) Ox0000)
-#define COLOR_YELLOW    ((uint16_t) 0xFFFF,(uint16_t) 0xFFFF,(uint16_t) Ox0000)
-#define COLOR_GREEN     ((uint16_t) 0x0000,(uint16_t) 0xFFFF,(uint16_t) Ox0000)
-#define COLOR_BLUE      ((uint16_t) 0x0000,(uint16_t) 0x0000,(uint16_t) 0xFFFF)
-#define COLOR_CYAN      ((uint16_t) 0x0000,(uint16_t) 0xFFFF,(uint16_t) OxFFFF)
-#define COLOR_MAGENTA   ((uint16_t) 0xFFFF,(uint16_t) 0x0000,(uint16_t) OxFFFF)
-#define COLOR_OFF       ((uint16_t) 0x0000,(uint16_t) 0x0000,(uint16_t) Ox0000)
+#define COLOR_WHITE     (uint16_t) 0xFFFF,(uint16_t) 0xFFFF,(uint16_t) 0xFFFF
+#define COLOR_RED       (uint16_t) 0xFFFF,(uint16_t) 0x0000,(uint16_t) 0x0000
+#define COLOR_ORANGE    (uint16_t) 0xFFFF,(uint16_t) 0x7FFF,(uint16_t) 0x0000
+#define COLOR_YELLOW    (uint16_t) 0xFFFF,(uint16_t) 0xFFFF,(uint16_t) 0x0000
+#define COLOR_GREEN     (uint16_t) 0x0000,(uint16_t) 0xFFFF,(uint16_t) 0x0000
+#define COLOR_BLUE      (uint16_t) 0x0000,(uint16_t) 0x0000,(uint16_t) 0xFFFF
+#define COLOR_CYAN      (uint16_t) 0x0000,(uint16_t) 0xFFFF,(uint16_t) 0xFFFF
+#define COLOR_MAGENTA   (uint16_t) 0xFFFF,(uint16_t) 0x0000,(uint16_t) 0xFFFF
+#define COLOR_OFF       (uint16_t) 0x0000,(uint16_t) 0x0000,(uint16_t) 0x0000
 
 /*
- * \func
- * tlc5955_init();
+ * \fn tlc5955_init();
  *
  * \brief
  * Initializes LED driver, sets max current limits, and sets dot correction.
@@ -50,8 +49,7 @@ extern "C"
 void tlc5955_init (void);
 
 /*
- * \func
- * set_led_color(led_id, red, green, blue);
+ * \fn set_led_color(led_id, red, green, blue);
  *
  * \brief
  *
@@ -85,9 +83,18 @@ void set_led_color (uint8_t led_id,
                     uint16_t green,
                     uint16_t blue);
 
+/**
+ * \def Starts PWM for gsclk
+ */
+#define START_GSCLK         (PWMOutputState(PWM0_BASE, PWM_OUT_6_BIT, true))
+
+/**
+ * \def Stops PWM for gsclk
+ */
+#define STOP_GSCLK          (PWMOutputState(PWM0_BASE, PWM_OUT_6_BIT, false))
+
 /*
- * \func
- * refresh_led();
+ * \fn refresh_led();
  *
  * \brief
  * Sends

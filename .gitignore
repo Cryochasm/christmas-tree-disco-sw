@@ -50,8 +50,8 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-**\Debug
-**\Release 
+**/Debug
+**/Release 
 .xdchelp
 \.config
 \.launches
