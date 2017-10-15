@@ -1172,7 +1172,7 @@ void serial_out_16bit(uint16_t data)
 {
     uint8_t temp_l = ((data >> 8) & 0x00FF);
     uint8_t temp_h = ((uint8_t) data) & 0x00FF;
-    serial_out_8bit((uint8_t) temp_h);
     serial_out_8bit((uint8_t) temp_l);
+    serial_out_8bit((uint8_t) temp_h);
 }
 
