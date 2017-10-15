@@ -66,23 +66,27 @@
 void init_gpio(void);
 void init_pwm(void);
 
-#define SERIAL_DELAY            ((uint32_t) 0x00000020)
 #define DELAY_TIME                  ((uint32_t) 500000u)
 #define MAX_COLOR_CORRECTION        ((uint8_t) 0x7Fu)
 #define MAX_RED_CURRENT             ((uint8_t) 0x00u)
 #define MAX_GREEN_CURRENT            ((uint8_t) 0x00u)
 #define MAX_BLUE_CURRENT            ((uint8_t) 0x00u)
 
+#define NDEBUG
+
+#ifndef NDEBUG
+#define SERIAL_DELAY            ((uint32_t) 0x00000010)
+#endif
+
 //
 //private function prototypes
 //
-void delay(volatile uint32_t loop_count);
-void serial_out_1bit(uint8_t data);
-void serial_out_3bit(uint8_t data);
-void serial_out_7bit(uint8_t data);
-void serial_out_8bit(uint8_t data);
-void serial_out_16bit(uint16_t data);
-
+void delay (volatile uint32_t loop_count);
+void serial_out_1bit (uint8_t data);
+void serial_out_3bit (uint8_t data);
+void serial_out_7bit (uint8_t data);
+void serial_out_8bit (uint8_t data);
+void serial_out_16bit (uint16_t data);
 
 //
 //typedefs
@@ -92,7 +96,7 @@ void serial_out_16bit(uint16_t data);
 //
 
 //#pragma pack (1) //force no filler bits in the structs so that it is easier to output serially
- 
+
 /**
  * \typedef gs_led_t
  * \struct gs_led_t
@@ -109,11 +113,10 @@ void serial_out_16bit(uint16_t data);
  */
 typedef struct
 {
-    uint16_t            red;
-    uint16_t            green;
-    uint16_t            blue;
+    uint16_t red;
+    uint16_t green;
+    uint16_t blue;
 } gs_led_t;
-
 
 /**
  * \typedef dc_led_t
@@ -134,11 +137,10 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t             red :7;
-    uint8_t             green :7;
-    uint8_t             blue :7;
+    uint8_t red :7;
+    uint8_t green :7;
+    uint8_t blue :7;
 } dc_led_t;
-
 
 /**
  * \struct funct_t
@@ -188,11 +190,11 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t             dsprpt :1;
-    uint8_t             tmgrst :1;
-    uint8_t             rfresh :1;
-    uint8_t             espwm :1;
-    uint8_t             lsdvlt :1;
+    uint8_t dsprpt :1;
+    uint8_t tmgrst :1;
+    uint8_t rfresh :1;
+    uint8_t espwm :1;
+    uint8_t lsdvlt :1;
 } func_t;
 
 /**
@@ -214,9 +216,9 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t             red_i :3;
-    uint8_t             green_i :3;
-    uint8_t             blue_i :3;
+    uint8_t red_i :3;
+    uint8_t green_i :3;
+    uint8_t blue_i :3;
 } maximum_current_t;
 
 //
@@ -236,8 +238,8 @@ typedef struct
  */
 typedef struct GS_COMMON_LATCH_T
 {
-    uint32_t                     msb :1;
-    gs_led_t                    led_gs[16];
+    uint32_t msb :1;
+    gs_led_t led_gs[16];
 } gs_common_latch_t; //768 bits long + 1 bit for latch
 
 /**
@@ -266,14 +268,14 @@ typedef struct GS_COMMON_LATCH_T
  */
 typedef struct CONTROL_COMMON_LATCH_T
 {
-    uint32_t                    msb :1;
-    uint8_t                     key;
-    uint8_t                     dummy_byte[48];
-    uint8_t                     dummy_bit :6;
-    func_t                      fc;
-    dc_led_t                    bc;
-    maximum_current_t           mc;
-    dc_led_t                    led_dc[16];
+    uint32_t msb :1;
+    uint8_t key;
+    uint8_t dummy_byte[48];
+    uint8_t dummy_bit :6;
+    func_t fc;
+    dc_led_t bc;
+    maximum_current_t mc;
+    dc_led_t led_dc[16];
 } control_common_latch_t;
 
 //
@@ -283,7 +285,10 @@ typedef struct CONTROL_COMMON_LATCH_T
 static volatile gs_common_latch_t g_grayscale_latch;
 static volatile control_common_latch_t g_control_latch;
 
-
+extern const uint8_t g_led_2d_array[5][8] = {
+        { 12, 12, 12, 12, 12, 12, 12, 12 }, { 0, 0, 0, 0, 9, 9, 9, 9 },
+        { 5, 5, 5, 4, 4, 13, 13, 13 }, { 1, 6, 6, 6, 15, 15, 15, 14 },
+        { 2, 3, 3, 7, 7, 11, 11, 10 }, };
 
 //
 //Public Functions
@@ -311,7 +316,7 @@ void tlc5955_init(void)
     g_control_latch.fc.tmgrst = 0;
     g_control_latch.fc.rfresh = 0;
     g_control_latch.fc.espwm = 1;
-    g_control_latch.fc.lsdvlt = 0;
+    g_control_latch.fc.lsdvlt = 1;
 
     g_control_latch.bc.red = MAX_COLOR_CORRECTION;
     g_control_latch.bc.green = MAX_COLOR_CORRECTION;
@@ -391,13 +396,17 @@ void tlc5955_init(void)
     serial_out_1bit(g_control_latch.msb);
     serial_out_8bit(g_control_latch.key);
     uint16_t dummy_count;
-    for (dummy_count = 0u; dummy_count < 390u; dummy_count++)
+    for (dummy_count = 0u; dummy_count < 389u; dummy_count++)
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
     serial_out_1bit(g_control_latch.fc.lsdvlt);
     serial_out_1bit(g_control_latch.fc.espwm);
@@ -420,20 +429,28 @@ void tlc5955_init(void)
     }
 
     LAT_HIGH;
+#ifndef NDEBUG
     delay(SERIAL_DELAY);
+#endif
     LAT_LOW;
+#ifndef NDEBUG
     delay(SERIAL_DELAY);
+#endif
 
     //output g_control_latch twice to lock in the maximum current
     serial_out_1bit(g_control_latch.msb);
     serial_out_8bit(g_control_latch.key);
-    for (dummy_count = 0u; dummy_count < 390u; dummy_count++)
+    for (dummy_count = 0u; dummy_count < 389u; dummy_count++)
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
     serial_out_1bit(g_control_latch.fc.lsdvlt);
     serial_out_1bit(g_control_latch.fc.espwm);
@@ -455,10 +472,13 @@ void tlc5955_init(void)
     }
 
     LAT_HIGH;
+#ifndef NDEBUG
     delay(SERIAL_DELAY);
+#endif
     LAT_LOW;
+#ifndef NDEBUG
     delay(SERIAL_DELAY);
-
+#endif
 }
 
 void set_led_color(uint8_t led_id, uint16_t red, uint16_t green, uint16_t blue)
@@ -480,32 +500,26 @@ void refresh_led(void)
 {
     serial_out_1bit(g_grayscale_latch.msb);
     int8_t led_count;
-        for (led_count =15u; led_count >= 0; led_count--)
-        {
-            serial_out_16bit(g_grayscale_latch.led_gs[led_count].blue);
-            serial_out_16bit(g_grayscale_latch.led_gs[led_count].green);
-            serial_out_16bit(g_grayscale_latch.led_gs[led_count].red);
-        }
-        LAT_HIGH;
-        delay(SERIAL_DELAY);
-        LAT_LOW;
-        delay(SERIAL_DELAY);
+    for (led_count = 15u; led_count >= 0; led_count--)
+    {
+        serial_out_16bit(g_grayscale_latch.led_gs[led_count].blue);
+        serial_out_16bit(g_grayscale_latch.led_gs[led_count].green);
+        serial_out_16bit(g_grayscale_latch.led_gs[led_count].red);
+    }
+    LAT_HIGH;
+#ifndef NDEBUG
+    delay(SERIAL_DELAY);
+#endif
+    LAT_LOW;
+#ifndef NDEBUG
+    delay(SERIAL_DELAY);
+#endif
 }
 
 void test_tlc5955(void)
 {
 
-   for(;;)
-   {
-       GSCLK_HIGH;
-       delay(SERIAL_DELAY);
-       GSCLK_LOW;
-       delay(SERIAL_DELAY);
-   }
-
-
 }
-
 
 /**
  * \fn init_gpio
@@ -582,7 +596,7 @@ void init_pwm(void)
 
     // Wait for the PWM0 module to be ready.
     //
-    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_PWM0))
+    while (!SysCtlPeripheralReady(SYSCTL_PERIPH_PWM0))
     {
     }
     //
@@ -609,7 +623,6 @@ void init_pwm(void)
 
 }
 
-
 //Private Functions
 
 /**
@@ -635,18 +648,26 @@ void serial_out_1bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 }
 
@@ -658,18 +679,26 @@ void serial_out_3bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x02) != 0u)
@@ -677,18 +706,26 @@ void serial_out_3bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x01) != 0u)
@@ -696,18 +733,26 @@ void serial_out_3bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 }
 
@@ -718,18 +763,26 @@ void serial_out_7bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x20) != 0u)
@@ -737,18 +790,26 @@ void serial_out_7bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x10) != 0u)
@@ -756,18 +817,26 @@ void serial_out_7bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x08) != 0u)
@@ -775,18 +844,26 @@ void serial_out_7bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x04) != 0u)
@@ -794,18 +871,26 @@ void serial_out_7bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x02) != 0u)
@@ -813,18 +898,26 @@ void serial_out_7bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x01) != 0u)
@@ -832,18 +925,26 @@ void serial_out_7bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
 }
@@ -855,18 +956,26 @@ void serial_out_8bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x40) != 0u)
@@ -874,18 +983,26 @@ void serial_out_8bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x20) != 0u)
@@ -893,18 +1010,26 @@ void serial_out_8bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x10) != 0u)
@@ -912,18 +1037,26 @@ void serial_out_8bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x08) != 0u)
@@ -931,18 +1064,26 @@ void serial_out_8bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x04) != 0u)
@@ -950,18 +1091,26 @@ void serial_out_8bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x02) != 0u)
@@ -969,18 +1118,26 @@ void serial_out_8bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 
     if ((data & 0x01) != 0u)
@@ -988,18 +1145,26 @@ void serial_out_8bit(uint8_t data)
 
         DATA_HIGH;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
 
     }
     else
     {
         DATA_LOW;
         SCLK_HIGH;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
         SCLK_LOW;
+#ifndef NDEBUG
         delay(SERIAL_DELAY);
+#endif
     }
 }
 
@@ -1007,7 +1172,7 @@ void serial_out_16bit(uint16_t data)
 {
     uint8_t temp_l = ((data >> 8) & 0x00FF);
     uint8_t temp_h = ((uint8_t) data) & 0x00FF;
-    serial_out_8bit((uint8_t)temp_h);
-    serial_out_8bit((uint8_t)temp_l);
+    serial_out_8bit((uint8_t) temp_h);
+    serial_out_8bit((uint8_t) temp_l);
 }
 
