@@ -121,33 +121,49 @@ void main(void)
     }
 
 #else
+
+
+
+    set_all_leds(0xFFFF, 0x0000, 0x0000);
+
     for (;;)
     {
-        uint16_t red_count = 0;
+        uint16_t red_count = 0xFFFF;
         uint16_t green_count = 0;
         uint16_t blue_count = 0;
 
-        for (red_count = 0; red_count != 0xFFFF; red_count = red_count + 0xFF)
+        delay_main(0x007FFFFF);
+
+        for (green_count = 0; green_count != 0xE01F; green_count = green_count + 0xFF)
         {
             set_all_leds(red_count, green_count, blue_count);
         }
-        for (green_count = 0; green_count != 0xFFFF; green_count = green_count + 0xFF)
+
+        for (red_count = 0xE01F; red_count != 0; red_count = red_count - 0xFF)
         {
             set_all_leds(red_count, green_count, blue_count);
         }
-        for (red_count = 0xFFFF; red_count != 0; red_count = red_count - 0xFF)
+
+        delay_main(0x007FFFFF);
+
+        for (blue_count = 0; blue_count != 0xE01F; blue_count = blue_count + 0xFF)
         {
             set_all_leds(red_count, green_count, blue_count);
         }
-        for (blue_count = 0; blue_count != 0xFFFF; blue_count = blue_count + 0xFF)
+
+        for (green_count = 0xE01F; green_count != 0xFF; green_count = green_count - 0xFF)
         {
             set_all_leds(red_count, green_count, blue_count);
         }
-        for (green_count = 0xFFFF; green_count != 0xFF; green_count = green_count - 0xFF)
+
+        delay_main(0x007FFFFF);
+
+        for (red_count = 0; red_count != 0xE01F; red_count = red_count + 0xFF)
         {
             set_all_leds(red_count, green_count, blue_count);
         }
-        for (blue_count = 0xFFFF; blue_count != 0xFF; blue_count = blue_count - 0xFF)
+
+        for (blue_count = 0xE01F; blue_count != 0xFF; blue_count = blue_count - 0xFF)
         {
             set_all_leds(red_count, green_count, blue_count);
         }
