@@ -16,6 +16,7 @@
 #include "driverlib/gpio.h"
 #include "driverlib/pwm.h"
 #include "driverlib/pin_map.h"
+#include "led_driver_tlc5955.h"
 
 /*
  * HAL for the EK-TM4C123GXL Launch Pad
@@ -68,7 +69,7 @@ void init_pwm(void);
 
 #define DELAY_TIME                  ((uint32_t) 500000u)
 #define MAX_COLOR_CORRECTION        ((uint8_t) 0x7Fu)
-#define MAX_RED_CURRENT             ((uint8_t) 0x00u)
+#define MAX_RED_CURRENT             ((uint8_t) 0x01u)
 #define MAX_GREEN_CURRENT            ((uint8_t) 0x00u)
 #define MAX_BLUE_CURRENT            ((uint8_t) 0x00u)
 
@@ -77,6 +78,21 @@ void init_pwm(void);
 #ifndef NDEBUG
 #define SERIAL_DELAY            ((uint32_t) 0x00000010)
 #endif
+
+//
+//Global Const Defines
+//
+extern const int8_t g_led_2d_array[ROW_MAX][COL_MAX] =
+{
+        { 12, 12, 12, 12, 12, 12, 12, 12 },
+        {  0,  0,  0,  0,  9,  9,  9,  9 },
+        {  5,  5,  5,  4,  4, 13, 13, 13 },
+        {  1,  6,  6,  6, 15, 15, 15, 14 },
+        {  2,  3,  3,  7,  7, 11, 11, 10 },
+};
+
+extern const int8_t g_led_array[ARRAY_MAX] =
+{ 12, 0, 9, 13, 4, 5, 1, 6, 15, 14, 10, 11, 7, 3, 2 };
 
 //
 //private function prototypes
@@ -102,16 +118,16 @@ void serial_out_16bit (uint16_t data);
  * \struct gs_led_t
  *
  * \var red
- * Sets the duty cylce for the grayscale PWM module.
+ * Sets the duty cycle for the grayscale PWM module.
  *
  * \var green
- * Sets the duty cylce for the grayscale PWM module.
+ * Sets the duty cycle for the grayscale PWM module.
  *
  * \var blue
- * Sets the duty cylce for the grayscale PWM module.
+ * Sets the duty cycle for the grayscale PWM module.
  *
  */
-typedef struct
+typedef struct GS_LED_T
 {
     uint16_t red;
     uint16_t green;
@@ -135,7 +151,7 @@ typedef struct
  * ...
  * 0x00 = 26.2%
  */
-typedef struct
+typedef struct DC_LED_T
 {
     uint8_t red :7;
     uint8_t green :7;
@@ -188,7 +204,7 @@ typedef struct
  * is VCC × 90%.
  *
  */
-typedef struct
+typedef struct FUNCT_T
 {
     uint8_t dsprpt :1;
     uint8_t tmgrst :1;
@@ -214,7 +230,7 @@ typedef struct
  * 0x06 = 27.1 mA VCC is not high enough to use this
  * 0x07 = 31.9 mA VCC is not high enough to use this
  */
-typedef struct
+typedef struct MAXIMUM_CURRENT_T
 {
     uint8_t red_i :3;
     uint8_t green_i :3;
@@ -270,8 +286,6 @@ typedef struct CONTROL_COMMON_LATCH_T
 {
     uint32_t msb :1;
     uint8_t key;
-    uint8_t dummy_byte[48];
-    uint8_t dummy_bit :6;
     func_t fc;
     dc_led_t bc;
     maximum_current_t mc;
@@ -285,10 +299,7 @@ typedef struct CONTROL_COMMON_LATCH_T
 static volatile gs_common_latch_t g_grayscale_latch;
 static volatile control_common_latch_t g_control_latch;
 
-extern const uint8_t g_led_2d_array[5][8] = {
-        { 12, 12, 12, 12, 12, 12, 12, 12 }, { 0, 0, 0, 0, 9, 9, 9, 9 },
-        { 5, 5, 5, 4, 4, 13, 13, 13 }, { 1, 6, 6, 6, 15, 15, 15, 14 },
-        { 2, 3, 3, 7, 7, 11, 11, 10 }, };
+
 
 //
 //Public Functions
@@ -319,8 +330,8 @@ void tlc5955_init(void)
     g_control_latch.fc.lsdvlt = 1;
 
     g_control_latch.bc.red = MAX_COLOR_CORRECTION;
-    g_control_latch.bc.green = MAX_COLOR_CORRECTION;
-    g_control_latch.bc.blue = MAX_COLOR_CORRECTION;
+    g_control_latch.bc.green = (MAX_COLOR_CORRECTION - 0x30);
+    g_control_latch.bc.blue = (MAX_COLOR_CORRECTION - 0x5A);
 
     g_control_latch.mc.red_i = MAX_RED_CURRENT;
     g_control_latch.mc.blue_i = MAX_BLUE_CURRENT;
@@ -481,21 +492,25 @@ void tlc5955_init(void)
 #endif
 }
 
-void set_led_color(uint8_t led_id, uint16_t red, uint16_t green, uint16_t blue)
+void set_led_color(int8_t led_id, uint16_t red, uint16_t green, uint16_t blue)
 {
     g_grayscale_latch.led_gs[led_id].red = red;
     g_grayscale_latch.led_gs[led_id].green = green;
     g_grayscale_latch.led_gs[led_id].blue = blue;
 }
 
-/**
- * \fn refesh_led
- * \brief
- * Outputs the contents of the g_grayscale_latch to the serial port and then latches the
- * data into the LED driver's internal buffers 
- *
- *
- */
+led_rgb_t get_led_color(int8_t led_id)
+{
+    led_rgb_t color;
+
+    color.red = g_grayscale_latch.led_gs[led_id].red;
+    color.green = g_grayscale_latch.led_gs[led_id].green;
+    color.blue = g_grayscale_latch.led_gs[led_id].blue;
+
+    return color;
+}
+
+
 void refresh_led(void)
 {
     serial_out_1bit(g_grayscale_latch.msb);
@@ -610,17 +625,65 @@ void init_pwm(void)
     // microseconds. For a 20 MHz clock, this translates to 400 clock ticks.
     // Use this value to set the period.
     //
-    PWMGenPeriodSet(PWM0_BASE, PWM_GEN_3, 1000);
+    PWMGenPeriodSet(PWM0_BASE, PWM_GEN_3, 400);
     //
     // Set the pulse width of PWM0 for a 50% duty cycle.
     //
-    PWMPulseWidthSet(PWM0_BASE, PWM_OUT_6, 500);
+    PWMPulseWidthSet(PWM0_BASE, PWM_OUT_6, 200);
 
     //
     // Start the timers in generator 0.
     //
     PWMGenEnable(PWM0_BASE, PWM_GEN_3);
 
+}
+#define COL_MAX     ((int8_t) 8)
+#define ROW_MAX     ((int8_t) 5)
+#define ARRAY_MAX   ((int8_t) 15)
+
+int8_t row_wrap(int8_t row, int8_t shift)
+{
+    int8_t temp;
+    temp = row + shift;
+    if (temp >= ROW_MAX)
+    {
+        temp = temp - ROW_MAX;
+    }
+    else if (temp < 0)
+    {
+        temp = temp + ROW_MAX;
+    }
+    return temp;
+}
+
+int8_t col_wrap(int8_t col, int8_t shift)
+{
+    int8_t temp;
+    temp = col + shift;
+    if (temp >= COL_MAX)
+    {
+        temp = temp - COL_MAX;
+    }
+    else if (temp < 0)
+    {
+        temp = temp + COL_MAX;
+    }
+    return temp;
+}
+
+int8_t array_wrap(int8_t index, int8_t shift)
+{
+    int8_t temp;
+    temp = index + shift;
+    if (temp >= ARRAY_MAX)
+    {
+        temp = temp - ARRAY_MAX;
+    }
+    else if (temp < 0)
+    {
+        temp = temp + ARRAY_MAX;
+    }
+    return temp;
 }
 
 //Private Functions
