@@ -47,7 +47,7 @@ uint16_t bounce_blue (uint16_t color, uint16_t shift);
 
 //*****************************************************************************
 //
-// Main 'C' Language entry point.  Toggle an LED using TivaWare.
+// Main 'C' Language entry point.
 //
 //*****************************************************************************
 void main(void)
@@ -583,7 +583,8 @@ void lfsr_init(lfsr_t *plfsr)
 /* Galois implementation of LFSR */
 bool lfsr_step(lfsr_t *plfsr)
 {
-    bool out = (plfsr->state & plfsr->ymask) != 0;
+    bool out;
+    out = (plfsr->state & plfsr->ymask) != 0;
     plfsr->state <<= 1;    // shift left
     if (out)
     {

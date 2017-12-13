@@ -22,10 +22,32 @@ extern "C"
 #endif
 
 /*
- * \def LED_WHITE
+ * \def COLOR_WHITE
+ *	Usage: set_led_color(1, COLOR_WHITE)
  *
- * \def LED_OFF
+ * \def COLOR_RED
+ * Usage: set_led_color(0, COLOR_RED)
  *
+ * \def COLOR_ORANGE
+ * Usage: set_led_color(12, COLOR_ORANGE)
+ * 
+ * \def COLOR_YELLOW
+ * Usage: set_led_color(6, COLOR_YELLOW)
+ *
+ * \def COLOR_GREEN
+ * Usage: set_led_color(7, COLOR_GREEN)
+ *
+ * \def COLOR_BLUE
+ * Usage: set_led_color(3, COLOR_BLUE)
+ *
+ * \def COLOR_CYAN
+ * Usage: set_led_color(2, COLOR_CYAN)
+ *
+ * \def COLOR_MAGENTA
+ * Usage: set_led_color(5, COLOR_MAGENTA)
+ *
+ * \def COLOR_OFF
+ * Usage: set_led_color(11, COLOR_OFF)
  *
  */
 //                                 | RED  |          | GREEN|          | BLUE |
@@ -258,4 +280,4 @@ void test_tlc5955 (void);
 #endif
 
 
-#endif /* LED_DRIVER_TLC5955_H_ */
+#endif // LED_DRIVER_TLC5955_H_

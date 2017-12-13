@@ -81,7 +81,10 @@ void init_pwm(void);
 
 //
 //Global Const Defines
-//
+/**
+* \var g_led_2d_array
+* This lookup table maps the led_id to the physical location in 2D space
+*/
 extern const int8_t g_led_2d_array[ROW_MAX][COL_MAX] =
 {
         { 12, 12, 12, 12, 12, 12, 12, 12 },
@@ -91,8 +94,14 @@ extern const int8_t g_led_2d_array[ROW_MAX][COL_MAX] =
         {  2,  3,  3,  7,  7, 11, 11, 10 },
 };
 
+
+/**
+* \var g_led_array
+*  This lookup table maps the led_id to a snake run up the tree
+*/
 extern const int8_t g_led_array[ARRAY_MAX] =
 { 12, 0, 9, 13, 4, 5, 1, 6, 15, 14, 10, 11, 7, 3, 2 };
+
 
 //
 //private function prototypes
@@ -110,8 +119,6 @@ void serial_out_16bit (uint16_t data);
 //
 //Base Structs
 //
-
-//#pragma pack (1) //force no filler bits in the structs so that it is easier to output serially
 
 /**
  * \typedef gs_led_t
@@ -133,6 +140,7 @@ typedef struct GS_LED_T
     uint16_t green;
     uint16_t blue;
 } gs_led_t;
+
 
 /**
  * \typedef dc_led_t
@@ -157,6 +165,7 @@ typedef struct DC_LED_T
     uint8_t green :7;
     uint8_t blue :7;
 } dc_led_t;
+
 
 /**
  * \struct funct_t
@@ -213,6 +222,7 @@ typedef struct FUNCT_T
     uint8_t lsdvlt :1;
 } func_t;
 
+
 /**
  * \struct maximum_current_t
  * \typedef maximum_current_t
@@ -258,6 +268,7 @@ typedef struct GS_COMMON_LATCH_T
     gs_led_t led_gs[16];
 } gs_common_latch_t; //768 bits long + 1 bit for latch
 
+
 /**
  * \struct control_common_latch_t
  * Control latch + the Dot Correction Latch.
@@ -295,14 +306,15 @@ typedef struct CONTROL_COMMON_LATCH_T
 //
 //Global Variables
 //
-//! \var g_latch Grayscale latch.
+//! \var g_grayscale_latch Contains all of the color information
+//! \var g_control_latch Contains the init information
 static volatile gs_common_latch_t g_grayscale_latch;
 static volatile control_common_latch_t g_control_latch;
 
 
 
 //
-//Public Functions
+//-----------------Public Functions---------------------------------------------
 //
 
 /**
@@ -492,6 +504,7 @@ void tlc5955_init(void)
 #endif
 }
 
+
 void set_led_color(int8_t led_id, uint16_t red, uint16_t green, uint16_t blue)
 {
     g_grayscale_latch.led_gs[led_id].red = red;
@@ -508,6 +521,207 @@ led_rgb_t get_led_color(int8_t led_id)
     color.blue = g_grayscale_latch.led_gs[led_id].blue;
 
     return color;
+}
+
+
+void set_led_hsv(int8_t led_id, led_hsv_t* color)
+{
+    int32_t red;
+    int32_t green;
+    int32_t blue;
+
+    int32_t c;
+    int32_t x;
+    int32_t m;
+
+    int32_t red_prime;
+    int32_t green_prime;
+    int32_t blue_prime;
+
+    c = (color->value * color->sat);
+
+    m = (color->value * 100 - c);
+
+    x = (c * ((1024 - abs(((color->hue * 1024 / 60) % 2048) - 1024)))) / 1000;
+
+    if (color->hue < 60)
+    {
+        red_prime = c;
+        green_prime = x;
+        blue_prime = 0;
+    }
+    else if (color->hue >= 60 && color->hue < 120)
+    {
+        red_prime = x;
+        green_prime = c;
+        blue_prime = 0;
+    }
+    else if (color->hue >= 120 && color->hue < 180)
+    {
+        red_prime = 0;
+        green_prime = c;
+        blue_prime = x;
+    }
+    else if (color->hue >= 180 && color->hue < 240)
+    {
+        red_prime = 0;
+        green_prime = x;
+        blue_prime = c;
+    }
+    else if (color->hue >= 240 && color->hue < 300)
+    {
+        red_prime = x;
+        green_prime = 0;
+        blue_prime = c;
+    }
+    else if (color->hue >= 300 && color->hue < 360)
+    {
+        red_prime = c;
+        green_prime = 0;
+        blue_prime = x;
+    }
+    else
+    {
+        //error case - turn off LEDs
+        red_prime = 0;
+        green_prime = 0;
+        blue_prime = 0;
+    }
+
+    red = (red_prime + m) * 0xFFFF;
+    green = (green_prime + m) * 0xFFFF;
+    blue = (blue_prime + m) * 0xFFFF;
+
+    g_grayscale_latch.led_gs[led_id].red = (uint16_t) red;
+    g_grayscale_latch.led_gs[led_id].green = (uint16_t) green;
+    g_grayscale_latch.led_gs[led_id].blue = (uint16_t) blue;
+    return;
+}
+
+
+led_hsv_t get_led_hsv(int8_t led_id)
+{
+    led_hsv_t hsv_color;
+/* import from courtney
+    int32_t red = g_grayscale_latch.led_id.red;
+    int32_t green;
+    int32_t blue;
+
+    int32_t hue;
+    int32_t sat;
+    int32_t val;
+
+    int32_t cmax;
+    int32_t cmin;
+    int32_t delta;
+
+    int32_t red_prime;
+    int32_t green_prime;
+    int32_t blue_prime;
+
+
+    red_prime = red*1000/255;
+    green_prime = green*1000/255;
+    blue_prime = blue*1000/255;
+
+    
+    // Cmax Calculation //
+
+    if ((red_prime >= green_prime) && (red_prime >= blue_prime))
+    {
+        cmax = red_prime;
+    }
+    else if ((blue_prime >= green_prime) && (blue_prime >= red_prime))
+    {
+        cmax = blue_prime;
+    }
+    else if ((green_prime >= red_prime) && (green_prime >= blue_prime))
+    {
+        cmax = green_prime;
+    }
+
+
+    // Cmin Calculation //
+
+    
+    if ((red_prime <= green_prime) && (red_prime <= blue_prime))
+    {
+        cmin = red_prime;
+    }
+    else if ((blue_prime <= green_prime) && (blue_prime <= red_prime))
+    {
+        cmin = blue_prime;
+    }
+    else if ((green_prime <= red_prime) && (green_prime <= blue_prime))
+    {
+        cmin = green_prime;
+    }
+
+    
+
+    delta = cmax - cmin;
+
+    printf("\nCmax = %d \nCmin = %d \nDelta = %d \n", cmax, cmin, delta);
+
+    
+
+    // Hue Calculation //
+
+    if (delta == 0)
+    {
+        hue = 0;
+    }
+
+    else if (cmax == red_prime && green_prime >= blue_prime)
+    {
+        hue = (60 * (((green_prime - blue_prime) * 1000/delta) % 6000)) / 1000;
+    }
+    else if (cmax == red_prime && blue_prime > green_prime)
+    {
+        hue = (60 * (((green_prime - blue_prime) * 1000/delta) + 6000)) / 1000;
+    }
+
+    else if (cmax == green_prime)
+    {
+        hue = (60 * ((blue_prime - red_prime) * 1000/delta + 2000)) / 1000;
+    }
+
+    else if (cmax == blue_prime)
+    {
+        hue = (60 * ((red_prime - green_prime) * 1000/delta + 4000)) / 1000;
+    }
+    else
+    {
+        printf("\nHue Error \n");
+    }
+
+    
+
+    // Sat Calculation //
+
+    if (cmax == 0)
+    {
+        sat = 0;
+    }
+    else if (cmax != 0)
+    {
+        sat = (delta * 1000/cmax) / 10;
+    }
+
+
+
+    // Val Calculation //
+
+    val = cmax/10;
+
+
+    printf("\nHue = %d \nSaturation = %d \nValue = %d \n", hue, sat, val);
+*/
+    hsv_color.hue = 0;
+    hsv_color.sat = 0;
+    hsv_color.value = 0;
+
+    return hsv_color;
 }
 
 
@@ -535,6 +749,10 @@ void test_tlc5955(void)
 {
 
 }
+
+//
+//--------------Private Functions----------------------------------------------
+//
 
 /**
  * \fn init_gpio
@@ -692,7 +910,7 @@ int8_t array_wrap(int8_t index, int8_t shift)
  * \fn delay(volatile uint32_t loop_count) 
  * Simple delay function.
  */
-void delay(volatile uint32_t loop_count)
+inline void delay(volatile uint32_t loop_count)
 {
     while (0u != loop_count)
     {
@@ -704,7 +922,7 @@ void delay(volatile uint32_t loop_count)
  * \fn serial_out_1bit(uint8_t data)
  * Outputs 1 bit onto the serial bus.
  */
-void serial_out_1bit(uint8_t data)
+inline void serial_out_1bit(uint8_t data)
 {
     if ((data & 0x01) != 0u)
     {
@@ -734,7 +952,12 @@ void serial_out_1bit(uint8_t data)
     }
 }
 
-void serial_out_3bit(uint8_t data)
+
+/**
+ * \fn serial_out_3bit(uint8_t data)
+ * Outputs 3 bits onto the serial bus.
+ */
+inline void serial_out_3bit(uint8_t data)
 {
 
     if ((data & 0x04) != 0u)
@@ -819,7 +1042,11 @@ void serial_out_3bit(uint8_t data)
     }
 }
 
-void serial_out_7bit(uint8_t data)
+/**
+ * \fn serial_out_7bit(uint8_t data)
+ * Outputs 7 bits onto the serial bus.
+ */
+inline void serial_out_7bit(uint8_t data)
 {
     if ((data & 0x40) != 0u)
     {
@@ -1012,7 +1239,11 @@ void serial_out_7bit(uint8_t data)
 
 }
 
-void serial_out_8bit(uint8_t data)
+/**
+ * \fn serial_out_8bit(uint8_t data)
+ * Outputs 8 bits onto the serial bus.
+ */
+inline void serial_out_8bit(uint8_t data)
 {
     if ((data & 0x80) != 0u)
     {
@@ -1231,7 +1462,11 @@ void serial_out_8bit(uint8_t data)
     }
 }
 
-void serial_out_16bit(uint16_t data)
+/**
+ * \fn serial_out_16bit(uint16_t data)
+ * Outputs 16 bits onto the serial bus.
+ */
+inline void serial_out_16bit(uint16_t data)
 {
     uint8_t temp_l = ((data >> 8) & 0x00FF);
     uint8_t temp_h = ((uint8_t) data) & 0x00FF;
